@@ -203,6 +203,124 @@ html, body { overflow-x: hidden; }
 </style>
 </head>
 <body>
+  <!-- ═══════════════════════════════════════════════════════════════════
+     G3X · Validador de Acesso — Retém ou Vende?
+     Cole este bloco LOGO APÓS a tag <body> no index.html do webapp.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="g3x-bloqueio-style">
+  #g3x-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #0A0F0A;
+    z-index: 999999;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'DM Sans', sans-serif;
+    color: #fff;
+    text-align: center;
+    padding: 2rem;
+  }
+  #g3x-overlay.show { display: flex; }
+  #g3x-overlay .icon { font-size: 3rem; margin-bottom: 1rem; }
+  #g3x-overlay h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: .5rem; }
+  #g3x-overlay p  { color: rgba(255,255,255,.5); font-size: .95rem; margin-bottom: 1.5rem; max-width: 340px; }
+  #g3x-overlay a  {
+    display: inline-block;
+    background: #4ADE80;
+    color: #0A0F0A;
+    font-weight: 700;
+    padding: .8rem 1.8rem;
+    border-radius: 10px;
+    text-decoration: none;
+    font-size: .95rem;
+  }
+</style>
+
+<div id="g3x-overlay">
+  <div class="icon">🔒</div>
+  <h2 id="g3x-titulo">Acesso restrito</h2>
+  <p  id="g3x-msg">Esta ferramenta é exclusiva para compradores. Adquira o acesso e receba seu link personalizado.</p>
+  <a  id="g3x-btn" href="https://pay.hotmart.com/TROQUE_PELO_LINK_DE_COMPRA" target="_blank">Comprar agora</a>
+</div>
+
+<script>
+(function () {
+  const SUPABASE_URL  = 'https://fqauhcxqzpwbiluzmzwl.supabase.co';
+  const TOOL_SLUG     = 'retencao';
+  const BUY_LINK      = 'https://pay.hotmart.com/TROQUE_PELO_LINK_DE_COMPRA';
+
+  const overlay  = document.getElementById('g3x-overlay');
+  const titulo   = document.getElementById('g3x-titulo');
+  const msg      = document.getElementById('g3x-msg');
+  const btn      = document.getElementById('g3x-btn');
+  btn.href = BUY_LINK;
+
+  function bloquear(t, m) {
+    titulo.textContent = t;
+    msg.textContent    = m;
+    overlay.classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function liberar() {
+    overlay.classList.remove('show');
+    document.body.style.overflow = '';
+  }
+
+  async function validar() {
+    const params = new URLSearchParams(location.search);
+    const token  = params.get('t');
+
+    if (!token) {
+      bloquear('Acesso restrito', 'Esta ferramenta é exclusiva para compradores. Adquira o acesso e receba seu link personalizado.');
+      return;
+    }
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/validate-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token,
+          tool: TOOL_SLUG,
+          device_id: getDeviceId(),
+          ip: ''
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.valid) {
+        const msgs = {
+          'refunded':        ['Acesso revogado',      'Esta compra foi reembolsada e o acesso foi encerrado.'],
+          'blocked_sharing': ['Acesso bloqueado',     'Detectamos uso compartilhado deste link. Entre em contato com o suporte.'],
+          'not_found':       ['Token inválido',       'Este link de acesso não foi reconhecido. Verifique o link recebido.'],
+          'wrong_tool':      ['Ferramenta incorreta', 'Seu plano não inclui esta ferramenta.'],
+        };
+        const [t2, m2] = msgs[data.reason] || ['Acesso negado', 'Não foi possível validar seu acesso.'];
+        bloquear(t2, m2);
+      } else {
+        liberar();
+      }
+    } catch (e) {
+      liberar();
+    }
+  }
+
+  function getDeviceId() {
+    let id = localStorage.getItem('g3x_device');
+    if (!id) {
+      id = 'dev_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem('g3x_device', id);
+    }
+    return id;
+  }
+
+  validar();
+})();
+</script>
 
 <!-- HEADER -->
 <div class="hdr">
